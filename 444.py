@@ -1,117 +1,143 @@
 class Mentor:
-    def __init__(self, name, surname):
+    def __init__(self, name, surname, courses=[]):
         self.name = name
         self.surname = surname
-        self.courses_attached = []
-
-    def __str__(self):
-        return f"Имя: {self.name}\nФамилия: {self.surname}"
+        self.courses = courses
 
 
 class Lecturer(Mentor):
-    def __init__(self, name, surname):
-        super().__init__(name, surname)
-        self.lecture_scores = {}
+    def __init__(self, name, surname, courses=[]):
+        super().__init__(name, surname, courses)
+        self.grades = {}
 
-    def __str__(self):
-        return f"{super().__str__()}\nСредняя оценка за лекции: {self.calculate_average_score():.1f}"
-
-    def calculate_average_score(self):
-        if not self.lecture_scores:
-            return 0
-        total_score = sum(sum(scores) for scores in self.lecture_scores.values())
-        total_lectures = sum(len(scores) for scores in self.lecture_scores.values())
-        return total_score / total_lectures
+    def rate_lecture(self, student, course, grade):
+        if course in self.courses:
+            if course not in self.grades:
+                self.grades[course] = []
+            self.grades[course].append(grade)
+            student.rate_lecture(course, grade)
+        else:
+            print(f"{self.name} {self.surname} is not teaching {course}.")
 
 
 class Reviewer(Mentor):
-    def __str__(self):
-        return super().__str__()
-
-
-def rate_lecturer(lecturer, course, score):
-    if isinstance(lecturer, Lecturer) and course in lecturer.courses_attached:
-        if course in lecturer.lecture_scores:
-            lecturer.lecture_scores[course].append(score)
+    def rate_homework(self, student, course, grade):
+        if course in self.courses:
+            student.rate_homework(course, grade)
         else:
-            lecturer.lecture_scores[course] = [score]
+            print(f"{self.name} {self.surname} is not assigned to {course}.")
 
 
 class Student:
-    def __init__(self, name, surname):
+    def __init__(self, name, surname, courses=[]):
         self.name = name
         self.surname = surname
-        self.courses_in_progress = []
+        self.courses_in_progress = courses
         self.completed_courses = {}
-        self.homework_scores = {}
+        self.grades = {}
+
+    def rate_homework(self, course, grade):
+        if course in self.courses_in_progress:
+            if course not in self.grades:
+                self.grades[course] = []
+            self.grades[course].append(grade)
+        else:
+            print(f"{self.name} {self.surname} is not studying {course}.")
+
+    def rate_lecture(self, course, grade):
+        if course in self.completed_courses:
+            if course not in self.grades:
+                self.grades[course] = []
+            self.grades[course].append(grade)
+        else:
+            print(f"{self.name} {self.surname} has not completed {course} yet.")
 
     def __str__(self):
-        return f"Имя: {self.name}\nФамилия: {self.surname}\nСредняя оценка за домашние задания: {self.calculate_average_score():.1f}\nКурсы в процессе изучения: {', '.join(self.courses_in_progress)}\nЗавершенные курсы: {', '.join(self.completed_courses.keys())}"
+        completed_courses_str = ', '.join(self.completed_courses.keys())
+        in_progress_courses_str = ', '.join(self.courses_in_progress)
+        return f"Имя: {self.name}\nФамилия: {self.surname}\n" \
+               f"Средняя оценка за домашние задания: {self.average_grade('homework')}\n" \
+               f"Курсы в процессе изучения: {in_progress_courses_str}\n" \
+               f"Завершенные курсы: {completed_courses_str}"
 
-    def calculate_average_score(self):
-        if not self.homework_scores:
+    def average_grade(self, type_='homework'):
+        if type_ == 'homework':
+            grades = [grade for course_grades in self.grades.values() for grade in course_grades]
+        else:
+            grades = [grade for course, grade in self.grades.items() if course in self.completed_courses]
+        if grades:
+            return sum(grades) / len(grades)
+        else:
             return 0
-        total_score = sum(sum(scores) for scores in self.homework_scores.values())
-        total_assignments = sum(len(scores) for scores in self.homework_scores.values())
-        return total_score / total_assignments
+
+    def __lt__(self, other):
+        return self.average_grade() < other.average_grade()
+
+    def __le__(self, other):
+        return self.average_grade() <= other.average_grade()
+
+    def __eq__(self, other):
+        return self.average_grade() == other.average_grade()
+
+    def __gt__(self, other):
+        return self.average_grade() > other.average_grade()
+
+    def __ge__(self, other):
+        return self.average_grade() >= other.average_grade()
 
 
-# Создание экземпляров классов
-student1 = Student("Иван", "Иванов")
-student2 = Student("Петр", "Петров")
-lecturer1 = Lecturer("Алексей", "Алексеев")
-lecturer2 = Lecturer("Михаил", "Михайлов")
-reviewer1 = Reviewer("Елена", "Еленова")
-reviewer2 = Reviewer("Ольга", "Ольгова")
+student1 = Student("Олег", "Олегов", ["Python", "Git"])
+student2 = Student("Петр", "Петров", ["Python"])
 
-# Проверка методов
-print("--- Информация о студентах ---")
+lecturer1 = Lecturer("Алексей", "Алексеев", ["Python"])
+lecturer2 = Lecturer("Михаил", "Михайлов", ["Git"])
+
+reviewer1 = Reviewer("Елена", "Еленова", ["Python"])
+reviewer2 = Reviewer("Ольга", "Ольгова", ["Git"])
+
+print("---Выставление оценок---")
+reviewer1.rate_homework(student1, "Python", 7)
+reviewer1.rate_homework(student1, "Python", 10)
+reviewer1.rate_homework(student2, "Python", 4)
+reviewer2.rate_homework(student1, "Git", 6)
+reviewer2.rate_homework(student2, "Git", 5)
+
+lecturer1.rate_lecture(student1, "Python", 3)
+lecturer1.rate_lecture(student2, "Python", 7)
+lecturer2.rate_lecture(student1, "Git", 9)
+lecturer2.rate_lecture(student2, "Git", 8)
+
+print("---Вывод информации о каждом---")
 print(student1)
-print("\n--- Информация о лекторах ---")
+print(student2)
 print(lecturer1)
-print("\n--- Информация о проверяющих ---")
+print(lecturer2)
 print(reviewer1)
+print(reviewer2)
 
-# Добавление курсов преподавателям и студентам
-lecturer1.courses_attached.append("Python")
-lecturer2.courses_attached.append("JavaScript")
-reviewer1.courses_attached.append("Python")
-reviewer2.courses_attached.append("JavaScript")
-student1.courses_in_progress.append("Python")
-student2.courses_in_progress.append("JavaScript")
+def average_homework_grade(students, course):
+    total_grade = 0
+    count = 0
+    for student in students:
+        if course in student.grades:
+            total_grade += sum(student.grades[course])
+            count += len(student.grades[course])
+    return total_grade / count if count != 0 else 0
 
-# Выставление оценок студентам и лекторам
-rate_lecturer(lecturer1, "Python", 8)
-rate_lecturer(lecturer1, "Python", 9)
-rate_lecturer(lecturer2, "JavaScript", 7)
-rate_lecturer(lecturer2, "JavaScript", 10)
+# Подсчет средней оценки за лекции всех лекторов в рамках курса
+def average_lecture_grade(lecturers, course):
+    total_grade = 0
+    count = 0
+    for lecturer in lecturers:
+        if course in lecturer.grades:
+            total_grade += sum(lecturer.grades[course])
+            count += len(lecturer.grades[course])
+    return total_grade / count if count != 0 else 0
 
-# Проверка выставленных оценок
-print("\n--- Проверка выставленных оценок ---")
-print(f"Оценки лектора 1 за курс Python: {lecturer1.lecture_scores}")
-print(f"Оценки лектора 2 за курс JavaScript: {lecturer2.lecture_scores}")
+print("---Средняя оценка за домашние задания по курсу---")
+print("Python:", average_homework_grade([student1, student2], "Python"))
+print("Git:", average_homework_grade([student1, student2], "Git"))
 
-
-# Реализация функций подсчета средней оценки
-def calculate_average_homework_score(students, course):
-    total_score = sum(
-        sum(scores) for student in students for key, scores in student.homework_scores.items() if key == course)
-
-    total_assignments = sum(
-        len(scores) for student in students for key, scores in student.homework_scores.items() if key == course)
-    return total_score / total_assignments if total_assignments > 0 else 0
-
-
-def calculate_average_lecture_score(lecturers, course):
-    total_score = sum(sum(scores) for lecturer in lecturers for key, scores in lecturer.lecture_scores.items() if key == course)
-    total_lectures = sum(
-        len(scores) for lecturer in lecturers for key, scores in lecturer.lecture_scores.items() if key == course)
-    return total_score / total_lectures if total_lectures > 0 else 0
-
-
-# Проверка функций подсчета средней оценки
-print("\n--- Проверка функций подсчета средней оценки ---")
-print(
-    f"Средняя оценка за домашние задания по курсу Python: {calculate_average_homework_score([student1, student2], 'Python'):.1f}")
-print(
-    f"Средняя оценка за лекции по курсу JavaScript: {calculate_average_lecture_score([lecturer1, lecturer2], 'JavaScript'):.1f}")
+print("---Средняя оценка за лекции по курсу---")
+print("Python:", average_lecture_grade([lecturer1, lecturer2], "Python"))
+print("Git:", average_lecture_grade([lecturer1, lecturer2], "Git"))
